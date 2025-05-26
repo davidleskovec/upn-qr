@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Quasar Build and Deploy
 
 on:
   push:
@@ -6,35 +6,31 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write      # dovoljenje za potiskanje na Pages
-  id-token: write   # obvezno
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
+  contents: write      # potrebno za push v gh-pages
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm ci
-      - run: npm install -g @quasar/cli
-      - run: quasar build
-      - uses: actions/upload-pages-artifact@v2
-        with:
-          path: dist/spa
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v2
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Quasar CLI
+        run: npm install -g @quasar/cli
+
+      - name: Build SPA
+        run: quasar build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages      # branch kamor objavi
+          folder: dist/spa      # pot do zgrajene aplikacije
+          clean: true           # počisti staro vsebino
