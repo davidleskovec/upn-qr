@@ -3,32 +3,38 @@ name: Build and Deploy
 on:
   push:
     branches: [ master, main ]
-  workflow_dispatch:   # omogoča ročni zagon
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write      # dovoljenje za potiskanje na Pages
+  id-token: write   # obvezno
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm install -g @quasar/cli
+      - run: quasar build
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: dist/spa
 
-    - name: Setup Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-        
-    - name: Install Quasar CLI
-      run: npm install -g @quasar/cli
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build (Quasar)
-      run: npm run build
-
-    - name: Deploy to gh-pages
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        branch: gh-pages    # kam objavi
-        folder: dist/spa    # Quasar output
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v2
